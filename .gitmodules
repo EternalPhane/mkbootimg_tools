@@ -1,0 +1,3 @@
+[submodule "ARM/GUI/extern/libsuperuser"]
+	path = ARM/GUI/extern/libsuperuser
+	url = https://github.com/Chainfire/libsuperuser.git
