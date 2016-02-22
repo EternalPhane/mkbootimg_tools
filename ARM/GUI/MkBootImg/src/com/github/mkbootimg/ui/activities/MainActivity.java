@@ -25,8 +25,8 @@ import android.widget.Toast;
 import eu.chainfire.libsuperuser.Shell;
 
 public class MainActivity extends Activity {
-	private final static String TAG = MainActivity.class.getSimpleName();
-	private Startup startup = null;
+	private static final String TAG = MainActivity.class.getSimpleName();
+	private Startup mStartup = null;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -34,14 +34,14 @@ public class MainActivity extends Activity {
 		setContentView(R.layout.activity_main);
 		((App) getApplication()).addActivity(this);
 		Log.i(TAG, "Creating and starting Startup ...");
-		startup = new Startup();
-		startup.setContext(this).execute();
+		mStartup = new Startup();
+		mStartup.setContext(this).execute();
 	}
 
 	@Override
 	protected void onStop() {
 		super.onStop();
-		startup.cancel(true);
+		mStartup.cancel(true);
 	}
 
 	@Override
@@ -64,23 +64,23 @@ public class MainActivity extends Activity {
 	}
 
 	private class Startup extends AsyncTask<Void, String, Void> {
-		private boolean suAvailable = false;
-		private ProgressDialog dialog = null;
-		private Context context = null;
-		private Resources res = null;
+		private static final int BUFFER_SIZE = 16 * 1024;
+		private boolean mSuAvailable = false;
+		private ProgressDialog mDialog = null;
+		private Context mContext = null;
+		private Resources mRes = null;
 
 		public Startup setContext(Context context) {
-			this.context = context;
-			res = context.getResources();
+			this.mContext = context;
+			mRes = context.getResources();
 			return this;
 		}
 
 		private void outputRawToFile(int id) {
-			final int BUFFER_SIZE = 16384;
-			final String name = res.getResourceEntryName(id);
-			final InputStream is = res.openRawResource(id);
+			final String name = mRes.getResourceEntryName(id);
+			final InputStream is = mRes.openRawResource(id);
 			try {
-				final FileOutputStream os = context.openFileOutput(name, MODE_PRIVATE);
+				final FileOutputStream os = mContext.openFileOutput(name, MODE_PRIVATE);
 				byte[] buffer = new byte[BUFFER_SIZE];
 				int read = 0;
 				while ((read = is.read(buffer)) > 0) {
@@ -93,18 +93,18 @@ public class MainActivity extends Activity {
 			} catch (IOException e) {
 				Log.e(TAG, "IO error. Resource name: " + name + "\nMessage: " + e.getMessage());
 			}
-			if (!context.getFileStreamPath(name).setExecutable(true, true)) {
+			if (!mContext.getFileStreamPath(name).setExecutable(true, true)) {
 				Log.e(TAG, "Failed to set executable. Resource name: " + name);
 			}
 		}
 
 		@Override
 		protected void onPreExecute() {
-			dialog = new ProgressDialog(context);
-			dialog.setMessage("Checking for root ...");
-			dialog.setIndeterminate(true);
-			dialog.setCancelable(false);
-			dialog.show();
+			mDialog = new ProgressDialog(mContext);
+			mDialog.setMessage("Checking for root ...");
+			mDialog.setIndeterminate(true);
+			mDialog.setCancelable(false);
+			mDialog.show();
 		}
 
 		@Override
@@ -112,8 +112,8 @@ public class MainActivity extends Activity {
 			if (android.os.Debug.isDebuggerConnected()) {
 				android.os.Debug.waitForDebugger();
 			}
-			suAvailable = Shell.SU.available();
-			if (suAvailable) {
+			mSuAvailable = Shell.SU.available();
+			if (mSuAvailable) {
 				publishProgress("Initializing ...");
 				final SharedPreferences prefs = getPreferences(MODE_PRIVATE);
 				if (!prefs.getBoolean("extracted", false)) {
@@ -145,9 +145,9 @@ public class MainActivity extends Activity {
 
 		@Override
 		protected void onPostExecute(Void result) {
-			dialog.dismiss();
-			if (!suAvailable) {
-				final Toast toast = new Toast(context);
+			mDialog.dismiss();
+			if (!mSuAvailable) {
+				final Toast toast = new Toast(mContext);
 				toast.setText("Root privilege is needed!");
 				toast.setDuration(Toast.LENGTH_LONG);
 				toast.setGravity(Gravity.CENTER, 0, 0);
@@ -158,7 +158,7 @@ public class MainActivity extends Activity {
 
 		@Override
 		protected void onProgressUpdate(String... values) {
-			dialog.setMessage(values[0]);
+			mDialog.setMessage(values[0]);
 		}
 	}
 }

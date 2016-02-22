@@ -9,26 +9,26 @@ import android.util.Log;
 import eu.chainfire.libsuperuser.Shell;
 
 public class RootThread extends Thread {
-	private final static String TAG = RootThread.class.getSimpleName();
-	private static RootThread singleton = null;
-	private Shell.Interactive rootSession = null;
+	private static final String TAG = RootThread.class.getSimpleName();
+	private Shell.Interactive mRootSession = null;
 	private Handler mHandler = null;
-	private Handler rootHandler;
-	private boolean idle = true;
-	private StringBuilder result = new StringBuilder();
+	private Handler mRootHandler;
+	private boolean mIdle = true;
+	private StringBuilder mResult = new StringBuilder();
 
 	private RootThread() {
 	}
 
+	private static class RootThreadHolder {
+		private static final RootThread instance = new RootThread();
+	}
+
 	public static RootThread getInstance() {
-		if (singleton == null) {
-			singleton = new RootThread();
-		}
-		return singleton;
+		return RootThreadHolder.instance;
 	}
 
 	public static RootThread getInstance(Handler h) {
-		while (!singleton.idle) {
+		while (!RootThreadHolder.instance.mIdle) {
 			try {
 				Thread.sleep(10);
 			} catch (InterruptedException e) {
@@ -37,12 +37,12 @@ public class RootThread extends Thread {
 				break;
 			}
 		}
-		singleton.mHandler = h;
+		RootThreadHolder.instance.mHandler = h;
 		return getInstance();
 	}
 
 	public Handler getRootHandler() {
-		return rootHandler;
+		return mRootHandler;
 	}
 
 	public void quitLooper() {
@@ -53,7 +53,7 @@ public class RootThread extends Thread {
 	}
 
 	private void openRootShell() {
-		rootSession = new Shell.Builder().useSU().setWantSTDERR(true).setWatchdogTimeout(20)
+		mRootSession = new Shell.Builder().useSU().setWantSTDERR(true).setWatchdogTimeout(20)
 				.open(new Shell.OnCommandResultListener() {
 					@Override
 					public void onCommandResult(int commandCode, int exitCode, List<String> output) {
@@ -68,11 +68,11 @@ public class RootThread extends Thread {
 	}
 
 	private void sendRootCommand(String command) {
-		result.setLength(0);
-		rootSession.addCommand(command, 1, new Shell.OnCommandLineListener() {
+		mResult.setLength(0);
+		mRootSession.addCommand(command, 1, new Shell.OnCommandLineListener() {
 			@Override
 			public void onLine(String line) {
-				result.append(line).append((char) 10);
+				mResult.append(line).append((char) 10);
 			}
 
 			@Override
@@ -91,8 +91,8 @@ public class RootThread extends Thread {
 	public void run() {
 		openRootShell();
 		Looper.prepare();
-		idle = false;
-		rootHandler = new Handler() {
+		mIdle = false;
+		mRootHandler = new Handler() {
 			@Override
 			public void handleMessage(Message mCommand) {
 				final String command = mCommand.getData().getString("command");
@@ -100,10 +100,10 @@ public class RootThread extends Thread {
 				sendRootCommand(command);
 				final Message mResult = mHandler.obtainMessage();
 				final Bundle bResult = mResult.getData();
-				bResult.putString("result", result.toString());
+				bResult.putString("mResult", mResult.toString());
 				mResult.setData(bResult);
 				mHandler.sendMessage(mResult);
-				idle = true;
+				mIdle = true;
 			}
 		};
 		Looper.loop();

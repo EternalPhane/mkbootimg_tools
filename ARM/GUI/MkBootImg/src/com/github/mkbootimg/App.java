@@ -3,6 +3,7 @@ package com.github.mkbootimg;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.github.mkbootimg.util.CrashHandler;
 import com.github.mkbootimg.util.RootThread;
 
 import android.app.Activity;
@@ -10,29 +11,30 @@ import android.app.Application;
 import android.content.Context;
 
 public class App extends Application {
-	private static Context context = null;
-	private List<Activity> activities = new ArrayList<Activity>();
+	private static Context sContext = null;
+	private List<Activity> mActivities = new ArrayList<Activity>();
 
 	public void addActivity(Activity activity) {
-		activities.add(activity);
+		mActivities.add(activity);
 	}
 
 	public static Context getAppContext() {
-		return context;
+		return sContext;
 	}
 
 	@Override
 	public void onCreate() {
 		super.onCreate();
-		context = getApplicationContext();
+		sContext = getApplicationContext();
+		CrashHandler.getInstance().init(sContext);
 	}
 
 	@Override
 	public void onTerminate() {
 		super.onTerminate();
-		for (Activity activity : activities) {
+		for (Activity activity : mActivities) {
 			activity.finish();
-			activities.remove(activity);
+			mActivities.remove(activity);
 		}
 		RootThread.getInstance().quitLooper();
 		System.exit(0);
